@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kepler Map Viewer</title>
+    <title>Kepler.gl Map Viewer</title>
+    <!-- Kepler.gl and dependencies -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/kepler.gl/dist/kepler.css">
     <script src="https://cdn.jsdelivr.net/npm/react/umd/react.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/react-dom/umd/react-dom.production.min.js"></script>
@@ -20,19 +21,62 @@
 <body>
     <div id="map"></div>
     <script>
-        // Setup Kepler.gl within a simple HTML page
-        const { KeplerGl } = window.kepler;
-        const reducer = kepler.gl.reducer({});
-        const store = Redux.createStore(reducer);
-        ReactDOM.render(
-            React.createElement(
-                ReactRedux.Provider,
-                { store },
-                React.createElement(KeplerGl, { id: "kepler-map", width: window.innerWidth, height: window.innerHeight })
-            ),
-            document.getElementById("map")
-        );
+        // Ensure all elements are loaded before executing script
+        document.addEventListener('DOMContentLoaded', function() {
+            const { KeplerGl, addDataToMap } = window.kepler;
+            
+            // Check if Redux and ReactRedux are loaded
+            if (!Redux || !ReactRedux) {
+                console.error('Redux or ReactRedux not loaded. Check your script order.');
+                return;
+            }
+
+            // Create the Redux store
+            const initialState = {};
+            const reducer = window.kepler.reducer(initialState);
+            const store = Redux.createStore(reducer);
+
+            // Render Kepler.gl within the map container
+            ReactDOM.render(
+                React.createElement(
+                    ReactRedux.Provider,
+                    { store },
+                    React.createElement(KeplerGl, { id: "kepler-map", width: window.innerWidth, height: window.innerHeight })
+                ),
+                document.getElementById("map")
+            );
+
+            // Load a sample CSV URL (replace with your own)
+            const csvUrl = 'https://raw.githubusercontent.com/uber-web/kepler.gl-data/master/earthquakes/data.csv';
+
+            // Load CSV data after rendering the Kepler instance
+            fetch(csvUrl)
+                .then(response => response.text())
+                .then(csvData => {
+                    const parsedData = window.kepler.processCsvData(csvData);
+
+                    const dataset = {
+                        info: {
+                            label: 'Earthquake Data',
+                            id: 'earthquake_dataset'
+                        },
+                        data: parsedData
+                    };
+
+                    store.dispatch(
+                        addDataToMap({
+                            datasets: dataset,
+                            options: {
+                                centerMap: true,
+                                readOnly: false
+                            }
+                        })
+                    );
+                })
+                .catch(error => {
+                    console.error('Error loading CSV data:', error);
+                });
+        });
     </script>
 </body>
 </html>
-
